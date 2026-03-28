@@ -54,8 +54,12 @@
     .estado.alerta { color: var(--danger); background: rgba(217, 48, 37, 0.1); }
     .monto { font-weight: 700; font-size: 22px; color: var(--success); letter-spacing: -0.5px; }
     
-    /* Destello para inyección de nuevo pago */
-    .tarjeta-nueva { animation: destello 2s ease-out forwards; }
+  /* Destello para inyección de nuevo pago */
+    .tarjeta-nueva { 
+      opacity: 1 !important; 
+      transform: translateY(0) !important;
+      animation: destello 2s ease-out forwards; 
+    }
     @keyframes destello {
       0% { background-color: #e6f7f1; transform: scale(1.02); }
       100% { background-color: var(--card-bg); transform: scale(1); }
