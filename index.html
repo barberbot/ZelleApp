@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
-    /* El mismo diseño premium que ya teníamos */
+    /* Diseño premium y Mobile-First */
     :root {
       --primary: #7432ff; --success: #10a37f; --danger: #d93025;
       --bg: #f4f5f7; --card-bg: #ffffff; --text-main: #111111; --text-muted: #666666;
@@ -25,12 +25,9 @@
     .header-title { color: var(--primary); font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
     
     /* Indicador de "En vivo" */
-    .indicador-vivo {
-      display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--success);
-    }
+    .indicador-vivo { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--success); }
     .punto-rojo {
-      width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%;
-      animation: latido 1.5s infinite;
+      width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%; animation: latido 1.5s infinite;
     }
     @keyframes latido {
       0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
@@ -57,10 +54,8 @@
     .estado.alerta { color: var(--danger); background: rgba(217, 48, 37, 0.1); }
     .monto { font-weight: 700; font-size: 22px; color: var(--success); letter-spacing: -0.5px; }
     
-    /* Efecto Destello para pagos nuevos */
-    .tarjeta-nueva {
-      animation: destello 2s ease-out forwards;
-    }
+    /* Destello para inyección de nuevo pago */
+    .tarjeta-nueva { animation: destello 2s ease-out forwards; }
     @keyframes destello {
       0% { background-color: #e6f7f1; transform: scale(1.02); }
       100% { background-color: var(--card-bg); transform: scale(1); }
@@ -83,18 +78,17 @@
     </div>
   </div>
 
-  <div id="contenedor-pagos">
-    </div>
+  <div id="contenedor-pagos"></div>
 
   <script>
-    // 1. URL BASE (Sin el /rest/v1/...)
+    // Configuración base de Supabase
     const supabaseUrl = 'https://jjjnnhbvshkjvgjxymyx.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqam5uaGJ2c2hranZnanh5bXl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjI4NTIsImV4cCI6MjA5MDIzODg1Mn0.uNjmSZVELI-1Nw14hXsecOqAyYX4L-THFGmAQNAOyo8';
 
-    // 2. Inicializamos el cliente de Supabase
     const { createClient } = supabase;
     const cliente = createClient(supabaseUrl, supabaseKey);
 
+    // Sistema de carga visual
     function mostrarEsqueleto() {
       const contenedor = document.getElementById('contenedor-pagos');
       let esqueletoHTML = '';
@@ -104,14 +98,12 @@
       contenedor.innerHTML = esqueletoHTML;
     }
 
-    // 3. Función para dibujar las tarjetas (Ahora usa el cliente de Supabase)
-    async function cargarPagos(destacarNuevo = false) {
+    // Carga inicial al abrir la app
+    async function cargarPagos() {
       const contenedor = document.getElementById('contenedor-pagos');
-      
       if (contenedor.innerHTML.trim() === '') mostrarEsqueleto();
 
       try {
-        // Hacemos la consulta usando el SDK de Supabase
         const { data: datos, error } = await cliente
           .from('transacciones_zelle')
           .select('*')
@@ -121,7 +113,6 @@
 
         setTimeout(() => {
           contenedor.innerHTML = ''; 
-
           if (datos.length === 0) {
             contenedor.innerHTML = '<div class="mensaje-vacio">Bandeja al día. No hay pagos recientes.</div>';
           } else {
@@ -132,13 +123,10 @@
               });
 
               const claseEstado = pago.estado.includes('Error') || pago.estado.includes('Alerta') ? 'estado alerta' : 'estado';
-              
-              // Si destacarNuevo es true, la primera tarjeta (la más reciente) brilla
-              const claseExtra = (destacarNuevo && index === 0) ? 'tarjeta-nueva' : '';
               const animDelay = index * 0.08;
 
               const tarjetaHTML = `
-                <div class="tarjeta ${claseExtra}" style="animation-delay: ${animDelay}s">
+                <div class="tarjeta" style="animation-delay: ${animDelay}s">
                   <div class="info-remitente">
                     <span class="nombre">${pago.remitente}</span>
                     <span class="fecha">${fechaLocal}</span>
@@ -158,22 +146,49 @@
       }
     }
 
-    // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL ---
-    // Esto se queda escuchando 24/7. Si alguien inserta un dato en Supabase, reacciona.
+    // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL CON INYECCIÓN DIRECTA ---
+    // Atrapa el evento, extrae la data y la dibuja sin recargar la página
     cliente
       .channel('cambios-zelle')
       .on(
         'postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'transacciones_zelle' }, 
         (payload) => {
-          console.log('¡Nuevo pago detectado en tiempo real!', payload);
-          // Recargamos la lista y le decimos que destaque la tarjeta nueva
-          cargarPagos(true); 
+          console.log('¡Nuevo pago inyectado!', payload);
+          
+          const nuevoPago = payload.new;
+          const fechaObj = new Date(nuevoPago.fecha_registro);
+          const fechaLocal = fechaObj.toLocaleString('es-VE', { 
+            day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' 
+          });
+
+          const claseEstado = nuevoPago.estado.includes('Error') || nuevoPago.estado.includes('Alerta') ? 'estado alerta' : 'estado';
+          
+          const tarjetaHTML = `
+            <div class="tarjeta tarjeta-nueva" style="animation-delay: 0s">
+              <div class="info-remitente">
+                <span class="nombre">${nuevoPago.remitente}</span>
+                <span class="fecha">${fechaLocal}</span>
+                <span class="${claseEstado}">${nuevoPago.estado}</span>
+              </div>
+              <div class="monto">$${nuevoPago.monto}</div>
+            </div>
+          `;
+          
+          const contenedor = document.getElementById('contenedor-pagos');
+          
+          // Limpia mensajes vacíos o de error antes de inyectar
+          if (contenedor.innerHTML.includes('Bandeja al día') || contenedor.innerHTML.includes('Error')) {
+            contenedor.innerHTML = '';
+          }
+          
+          // Inyecta la tarjeta nueva de primera en la lista
+          contenedor.insertAdjacentHTML('afterbegin', tarjetaHTML);
         }
       )
       .subscribe();
 
-    // Carga inicial al abrir la página
+    // Arrancamos el motor
     cargarPagos();
 
   </script>
