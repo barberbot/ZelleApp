@@ -146,44 +146,55 @@
       }
     }
 
-    // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL CON INYECCIÓN DIRECTA ---
-    // Atrapa el evento, extrae la data y la dibuja sin recargar la página
+  // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL CON INYECCIÓN DIRECTA ---
     cliente
       .channel('cambios-zelle')
       .on(
         'postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'transacciones_zelle' }, 
         (payload) => {
-          console.log('¡Nuevo pago inyectado!', payload);
+          console.log('1. ¡Señal recibida de Supabase!', payload);
           
-          const nuevoPago = payload.new;
-          const fechaObj = new Date(nuevoPago.fecha_registro);
-          const fechaLocal = fechaObj.toLocaleString('es-VE', { 
-            day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' 
-          });
+          try {
+            const nuevoPago = payload.new;
+            console.log('2. Datos crudos extraídos:', nuevoPago);
 
-          const claseEstado = nuevoPago.estado.includes('Error') || nuevoPago.estado.includes('Alerta') ? 'estado alerta' : 'estado';
-          
-          const tarjetaHTML = `
-            <div class="tarjeta tarjeta-nueva" style="animation-delay: 0s">
-              <div class="info-remitente">
-                <span class="nombre">${nuevoPago.remitente}</span>
-                <span class="fecha">${fechaLocal}</span>
-                <span class="${claseEstado}">${nuevoPago.estado}</span>
+            const fechaObj = new Date(nuevoPago.fecha_registro);
+            const fechaLocal = fechaObj.toLocaleString('es-VE', { 
+              day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' 
+            });
+            console.log('3. Fecha formateada con éxito:', fechaLocal);
+
+            // Blindaje: Si por algún error la base de datos manda el estado vacío, no colapsa
+            const estadoTexto = nuevoPago.estado || 'Procesado';
+            const claseEstado = estadoTexto.includes('Error') || estadoTexto.includes('Alerta') ? 'estado alerta' : 'estado';
+            console.log('4. Estado calculado:', claseEstado);
+            
+            // Blindaje: Si falta el remitente o el monto, ponemos un respaldo
+            const tarjetaHTML = `
+              <div class="tarjeta tarjeta-nueva" style="animation-delay: 0s">
+                <div class="info-remitente">
+                  <span class="nombre">${nuevoPago.remitente || 'Desconocido'}</span>
+                  <span class="fecha">${fechaLocal}</span>
+                  <span class="${claseEstado}">${estadoTexto}</span>
+                </div>
+                <div class="monto">$${nuevoPago.monto || '0.00'}</div>
               </div>
-              <div class="monto">$${nuevoPago.monto}</div>
-            </div>
-          `;
-          
-          const contenedor = document.getElementById('contenedor-pagos');
-          
-          // Limpia mensajes vacíos o de error antes de inyectar
-          if (contenedor.innerHTML.includes('Bandeja al día') || contenedor.innerHTML.includes('Error')) {
-            contenedor.innerHTML = '';
+            `;
+            console.log('5. Diseño HTML construido perfectamente.');
+            
+            const contenedor = document.getElementById('contenedor-pagos');
+            
+            if (contenedor.innerHTML.includes('Bandeja al día') || contenedor.innerHTML.includes('Error')) {
+              contenedor.innerHTML = '';
+            }
+            
+            contenedor.insertAdjacentHTML('afterbegin', tarjetaHTML);
+            console.log('6. ¡Éxito! Tarjeta insertada en la pantalla.');
+
+          } catch (errorVisual) {
+            console.error('🚨 ERROR CRÍTICO AL DIBUJAR LA TARJETA:', errorVisual);
           }
-          
-          // Inyecta la tarjeta nueva de primera en la lista
-          contenedor.insertAdjacentHTML('afterbegin', tarjetaHTML);
         }
       )
       .subscribe();
