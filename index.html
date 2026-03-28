@@ -2,148 +2,267 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Movimientos Zelle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Movimientos Zelle</title>
   <style>
-    /* Diseño Mobile-First */
+    /* Variables de colores premium */
+    :root {
+      --primary: #7432ff;
+      --success: #10a37f;
+      --danger: #d93025;
+      --bg: #f4f5f7;
+      --card-bg: #ffffff;
+      --text-main: #111111;
+      --text-muted: #666666;
+    }
+
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-      background-color: #f4f5f7; 
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, Helvetica, sans-serif; 
+      background-color: var(--bg); 
       margin: 0; 
-      padding: 15px; 
+      padding: 0;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
     }
-    .header { 
-      text-align: center; 
-      color: #7432ff; 
-      margin-bottom: 25px; 
-      font-size: 24px;
-      font-weight: bold;
+
+    /* Encabezado fijo con efecto de cristal (Glassmorphism) */
+    .header-container {
+      background: rgba(244, 245, 247, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 18px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
     }
+
+    .header-title { 
+      color: var(--primary); 
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    /* Botón de actualizar fluido */
+    .btn-actualizar {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-actualizar:active { background: rgba(116, 50, 255, 0.15); }
+    
+    .btn-actualizar svg {
+      width: 22px;
+      height: 22px;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .girar { transform: rotate(360deg); }
+
     #contenedor-pagos {
-      max-width: 600px; /* Para que no se estire demasiado en PC */
-      margin: 0 auto;
+      max-width: 600px; 
+      margin: 15px auto 40px auto;
+      padding: 0 15px;
     }
+
+    /* Tarjetas con animación de entrada (Slide up) */
     .tarjeta { 
-      background: white; 
-      border-radius: 12px; 
-      padding: 16px; 
-      margin-bottom: 12px; 
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+      background: var(--card-bg); 
+      border-radius: 18px; 
+      padding: 20px; 
+      margin-bottom: 14px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04); 
       display: flex; 
       justify-content: space-between; 
       align-items: center; 
+      opacity: 0;
+      transform: translateY(20px);
+      animation: aparecer 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
-    .info-remitente { 
-      display: flex; 
-      flex-direction: column; 
+
+    @keyframes aparecer {
+      to { opacity: 1; transform: translateY(0); }
     }
+
+    .info-remitente { display: flex; flex-direction: column; gap: 4px; }
+    
     .nombre { 
-      font-weight: bold; 
+      font-weight: 600; 
       font-size: 16px; 
-      color: #111; 
       text-transform: capitalize;
     }
-    .fecha { 
-      font-size: 13px; 
-      color: #777; 
-      margin-top: 4px; 
-    }
+    .fecha { font-size: 13px; color: var(--text-muted); }
+    
     .estado { 
       font-size: 11px; 
-      color: #10a37f; 
-      background: #e6f7f1; 
-      padding: 4px 8px; 
-      border-radius: 12px; 
-      margin-top: 8px; 
+      font-weight: 600;
+      color: var(--success); 
+      background: rgba(16, 163, 127, 0.1); 
+      padding: 5px 10px; 
+      border-radius: 20px; 
+      margin-top: 6px; 
       display: inline-block;
       width: fit-content;
     }
-    .estado.alerta {
-      color: #d93025;
-      background: #fce8e6;
-    }
+    .estado.alerta { color: var(--danger); background: rgba(217, 48, 37, 0.1); }
+    
     .monto { 
-      font-weight: bold; 
+      font-weight: 700; 
       font-size: 22px; 
-      color: #10a37f; 
+      color: var(--success); 
+      letter-spacing: -0.5px;
     }
-    .cargando {
-      text-align: center;
-      color: #888;
-      font-style: italic;
+
+    /* Esqueleto de carga (Shimmer effect) estilo Apple */
+    .esqueleto {
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.02);
     }
+    .shimmer {
+      animation: shimmer 1.5s infinite linear;
+      background: linear-gradient(to right, #f4f5f7 4%, #e9ebee 25%, #f4f5f7 36%);
+      background-size: 1000px 100%;
+      border-radius: 8px;
+    }
+    .sk-line-1 { width: 130px; height: 18px; margin-bottom: 8px; }
+    .sk-line-2 { width: 90px; height: 12px; margin-bottom: 12px; }
+    .sk-line-3 { width: 100px; height: 22px; border-radius: 20px; }
+    .sk-monto { width: 80px; height: 26px; border-radius: 6px; }
+
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+
+    .mensaje-vacio { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 15px; }
   </style>
 </head>
 <body>
 
-  <div class="header">Pagos Recibidos</div>
-  <div id="contenedor-pagos">
-    <div class="cargando">Conectando con la base de datos...</div>
+  <div class="header-container">
+    <h1 class="header-title">Zelle</h1>
+    <button class="btn-actualizar" id="btn-refresh" onclick="cargarPagos()" aria-label="Actualizar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+    </button>
   </div>
 
+  <div id="contenedor-pagos">
+    </div>
+
   <script>
-    // --- CONFIGURACIÓN DE TU BASE DE DATOS ---
-   // --- CONFIGURACIÓN DE TU BASE DE DATOS ---
-    // 1. URL con la ruta exacta de la tabla y entre comillas simples:
     const supabaseUrl = 'https://jjjnnhbvshkjvgjxymyx.supabase.co/rest/v1/transacciones_zelle?select=*&order=id.desc';
-    
-    // 2. Tu API Key anónima (también entre comillas simples):
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqam5uaGJ2c2hranZnanh5bXl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjI4NTIsImV4cCI6MjA5MDIzODg1Mn0.uNjmSZVELI-1Nw14hXsecOqAyYX4L-THFGmAQNAOyo8';
-    // Función principal que consulta a Supabase y pinta el HTML
+
+    function mostrarEsqueleto() {
+      const contenedor = document.getElementById('contenedor-pagos');
+      let esqueletoHTML = '';
+      for(let i=0; i<4; i++) {
+        esqueletoHTML += `
+          <div class="esqueleto">
+            <div>
+              <div class="shimmer sk-line-1"></div>
+              <div class="shimmer sk-line-2"></div>
+              <div class="shimmer sk-line-3"></div>
+            </div>
+            <div class="shimmer sk-monto"></div>
+          </div>
+        `;
+      }
+      contenedor.innerHTML = esqueletoHTML;
+    }
+
     async function cargarPagos() {
+      const icon = document.querySelector('.btn-actualizar svg');
+      icon.classList.add('girar');
+      
+      const contenedor = document.getElementById('contenedor-pagos');
+      
+      // Si la app recién se abre (está vacía), mostramos el esqueleto
+      if (contenedor.innerHTML.trim() === '') {
+        mostrarEsqueleto();
+      }
+
       try {
         const respuesta = await fetch(supabaseUrl, {
           method: 'GET',
           headers: {
             'apikey': supabaseKey,
-            'Authorization': 'Bearer ' + supabaseKey
+            'Authorization': 'Bearer ' + supabaseKey,
+            'Cache-Control': 'no-cache'
           }
         });
         
         const datos = await respuesta.json();
-        const contenedor = document.getElementById('contenedor-pagos');
-        contenedor.innerHTML = ''; // Limpiamos el mensaje de "Cargando..."
+        
+        // Pequeña pausa artificial para que la animación de refresco se aprecie
+        setTimeout(() => {
+          contenedor.innerHTML = ''; 
 
-        if (datos.length === 0) {
-          contenedor.innerHTML = '<div class="cargando">Aún no hay pagos registrados.</div>';
-          return;
-        }
+          if (datos.length === 0) {
+            contenedor.innerHTML = '<div class="mensaje-vacio">Bandeja al día. No hay pagos recientes.</div>';
+          } else {
+            datos.forEach((pago, index) => {
+              const fechaObj = new Date(pago.fecha_registro);
+              const fechaLocal = fechaObj.toLocaleString('es-VE', { 
+                day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' 
+              });
 
-        // Recorremos los datos y creamos una tarjeta por cada pago
-        datos.forEach(pago => {
-          // Formatear la fecha para que se lea fácil
-          const fechaObj = new Date(pago.fecha_registro);
-          const fechaLocal = fechaObj.toLocaleString('es-ES', { 
-            day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' 
-          });
+              const claseEstado = pago.estado.includes('Error') || pago.estado.includes('Alerta') ? 'estado alerta' : 'estado';
+              
+              // Animación en cascada: Cada tarjeta tarda 0.08s más en aparecer que la anterior
+              const animDelay = index * 0.08;
 
-          // Definir el color del estado por si hubo error en la extracción
-          const claseEstado = pago.estado.includes('Error') || pago.estado.includes('Alerta') ? 'estado alerta' : 'estado';
-
-          // Construir la tarjeta HTML
-          const tarjetaHTML = `
-            <div class="tarjeta">
-              <div class="info-remitente">
-                <span class="nombre">${pago.remitente}</span>
-                <span class="fecha">${fechaLocal}</span>
-                <span class="${claseEstado}">${pago.estado}</span>
-              </div>
-              <div class="monto">$${pago.monto}</div>
-            </div>
-          `;
+              const tarjetaHTML = `
+                <div class="tarjeta" style="animation-delay: ${animDelay}s">
+                  <div class="info-remitente">
+                    <span class="nombre">${pago.remitente}</span>
+                    <span class="fecha">${fechaLocal}</span>
+                    <span class="${claseEstado}">${pago.estado}</span>
+                  </div>
+                  <div class="monto">$${pago.monto}</div>
+                </div>
+              `;
+              contenedor.innerHTML += tarjetaHTML;
+            });
+          }
           
-          // Inyectar la tarjeta en la página
-          contenedor.innerHTML += tarjetaHTML;
-        });
+          icon.classList.remove('girar');
+        }, 400); 
 
       } catch (error) {
-        console.error('Error al cargar datos:', error);
-        document.getElementById('contenedor-pagos').innerHTML = '<div class="cargando" style="color: red;">Error de conexión. Intenta recargar la página.</div>';
+        console.error('Error:', error);
+        contenedor.innerHTML = '<div class="mensaje-vacio" style="color: var(--danger);">Error de conexión. Verifica tu internet.</div>';
+        icon.classList.remove('girar');
       }
     }
 
-    // Ejecutar la función apenas se abre la página
+    // Ejecución inicial
+    mostrarEsqueleto();
     cargarPagos();
+
+    // Auto-Actualizar cada 60 segundos de forma silenciosa
+    setInterval(cargarPagos, 60000);
   </script>
 
 </body>
