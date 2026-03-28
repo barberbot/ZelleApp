@@ -4,154 +4,72 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Movimientos Zelle</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <style>
-    /* Variables de colores premium */
+    /* El mismo diseño premium que ya teníamos */
     :root {
-      --primary: #7432ff;
-      --success: #10a37f;
-      --danger: #d93025;
-      --bg: #f4f5f7;
-      --card-bg: #ffffff;
-      --text-main: #111111;
-      --text-muted: #666666;
+      --primary: #7432ff; --success: #10a37f; --danger: #d93025;
+      --bg: #f4f5f7; --card-bg: #ffffff; --text-main: #111111; --text-muted: #666666;
     }
-
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, Helvetica, sans-serif; 
-      background-color: var(--bg); 
-      margin: 0; 
-      padding: 0;
-      color: var(--text-main);
-      -webkit-font-smoothing: antialiased;
+      background-color: var(--bg); margin: 0; padding: 0; color: var(--text-main); -webkit-font-smoothing: antialiased;
     }
-
-    /* Encabezado fijo con efecto de cristal (Glassmorphism) */
     .header-container {
-      background: rgba(244, 245, 247, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      padding: 18px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+      background: rgba(244, 245, 247, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100; padding: 18px 20px;
+      display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03);
     }
-
-    .header-title { 
-      color: var(--primary); 
-      font-size: 20px;
-      font-weight: 700;
-      margin: 0;
-      letter-spacing: -0.3px;
-    }
-
-    /* Botón de actualizar fluido */
-    .btn-actualizar {
-      background: none;
-      border: none;
-      color: var(--primary);
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.3s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-actualizar:active { background: rgba(116, 50, 255, 0.15); }
+    .header-title { color: var(--primary); font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
     
-    .btn-actualizar svg {
-      width: 22px;
-      height: 22px;
-      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Indicador de "En vivo" */
+    .indicador-vivo {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--success);
     }
-    .girar { transform: rotate(360deg); }
-
-    #contenedor-pagos {
-      max-width: 600px; 
-      margin: 15px auto 40px auto;
-      padding: 0 15px;
+    .punto-rojo {
+      width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%;
+      animation: latido 1.5s infinite;
+    }
+    @keyframes latido {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
     }
 
-    /* Tarjetas con animación de entrada (Slide up) */
+    #contenedor-pagos { max-width: 600px; margin: 15px auto 40px auto; padding: 0 15px; }
+    
     .tarjeta { 
-      background: var(--card-bg); 
-      border-radius: 18px; 
-      padding: 20px; 
-      margin-bottom: 14px; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.04); 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      opacity: 0;
-      transform: translateY(20px);
-      animation: aparecer 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      background: var(--card-bg); border-radius: 18px; padding: 20px; margin-bottom: 14px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; 
+      opacity: 0; transform: translateY(20px); animation: aparecer 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
-
-    @keyframes aparecer {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
+    @keyframes aparecer { to { opacity: 1; transform: translateY(0); } }
+    
     .info-remitente { display: flex; flex-direction: column; gap: 4px; }
-    
-    .nombre { 
-      font-weight: 600; 
-      font-size: 16px; 
-      text-transform: capitalize;
-    }
+    .nombre { font-weight: 600; font-size: 16px; text-transform: capitalize; }
     .fecha { font-size: 13px; color: var(--text-muted); }
-    
     .estado { 
-      font-size: 11px; 
-      font-weight: 600;
-      color: var(--success); 
-      background: rgba(16, 163, 127, 0.1); 
-      padding: 5px 10px; 
-      border-radius: 20px; 
-      margin-top: 6px; 
-      display: inline-block;
-      width: fit-content;
+      font-size: 11px; font-weight: 600; color: var(--success); background: rgba(16, 163, 127, 0.1); 
+      padding: 5px 10px; border-radius: 20px; margin-top: 6px; display: inline-block; width: fit-content;
     }
     .estado.alerta { color: var(--danger); background: rgba(217, 48, 37, 0.1); }
+    .monto { font-weight: 700; font-size: 22px; color: var(--success); letter-spacing: -0.5px; }
     
-    .monto { 
-      font-weight: 700; 
-      font-size: 22px; 
-      color: var(--success); 
-      letter-spacing: -0.5px;
+    /* Efecto Destello para pagos nuevos */
+    .tarjeta-nueva {
+      animation: destello 2s ease-out forwards;
+    }
+    @keyframes destello {
+      0% { background-color: #e6f7f1; transform: scale(1.02); }
+      100% { background-color: var(--card-bg); transform: scale(1); }
     }
 
-    /* Esqueleto de carga (Shimmer effect) estilo Apple */
-    .esqueleto {
-      background: #fff;
-      border-radius: 18px;
-      padding: 20px;
-      margin-bottom: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.02);
-    }
-    .shimmer {
-      animation: shimmer 1.5s infinite linear;
-      background: linear-gradient(to right, #f4f5f7 4%, #e9ebee 25%, #f4f5f7 36%);
-      background-size: 1000px 100%;
-      border-radius: 8px;
-    }
-    .sk-line-1 { width: 130px; height: 18px; margin-bottom: 8px; }
-    .sk-line-2 { width: 90px; height: 12px; margin-bottom: 12px; }
-    .sk-line-3 { width: 100px; height: 22px; border-radius: 20px; }
-    .sk-monto { width: 80px; height: 26px; border-radius: 6px; }
-
-    @keyframes shimmer {
-      0% { background-position: -1000px 0; }
-      100% { background-position: 1000px 0; }
-    }
-
+    .esqueleto { background: #fff; border-radius: 18px; padding: 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .shimmer { animation: shimmer 1.5s infinite linear; background: linear-gradient(to right, #f4f5f7 4%, #e9ebee 25%, #f4f5f7 36%); background-size: 1000px 100%; border-radius: 8px; }
+    .sk-line-1 { width: 130px; height: 18px; margin-bottom: 8px; } .sk-line-2 { width: 90px; height: 12px; margin-bottom: 12px; } .sk-line-3 { width: 100px; height: 22px; border-radius: 20px; } .sk-monto { width: 80px; height: 26px; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
     .mensaje-vacio { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 15px; }
   </style>
 </head>
@@ -159,63 +77,48 @@
 
   <div class="header-container">
     <h1 class="header-title">Zelle</h1>
-    <button class="btn-actualizar" id="btn-refresh" onclick="cargarPagos()" aria-label="Actualizar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-      </svg>
-    </button>
+    <div class="indicador-vivo">
+      <div class="punto-rojo"></div>
+      En vivo
+    </div>
   </div>
 
   <div id="contenedor-pagos">
     </div>
 
   <script>
-    const supabaseUrl = 'https://jjjnnhbvshkjvgjxymyx.supabase.co/rest/v1/transacciones_zelle?select=*&order=id.desc';
+    // 1. URL BASE (Sin el /rest/v1/...)
+    const supabaseUrl = 'https://jjjnnhbvshkjvgjxymyx.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqam5uaGJ2c2hranZnanh5bXl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NjI4NTIsImV4cCI6MjA5MDIzODg1Mn0.uNjmSZVELI-1Nw14hXsecOqAyYX4L-THFGmAQNAOyo8';
+
+    // 2. Inicializamos el cliente de Supabase
+    const { createClient } = supabase;
+    const cliente = createClient(supabaseUrl, supabaseKey);
 
     function mostrarEsqueleto() {
       const contenedor = document.getElementById('contenedor-pagos');
       let esqueletoHTML = '';
       for(let i=0; i<4; i++) {
-        esqueletoHTML += `
-          <div class="esqueleto">
-            <div>
-              <div class="shimmer sk-line-1"></div>
-              <div class="shimmer sk-line-2"></div>
-              <div class="shimmer sk-line-3"></div>
-            </div>
-            <div class="shimmer sk-monto"></div>
-          </div>
-        `;
+        esqueletoHTML += `<div class="esqueleto"><div><div class="shimmer sk-line-1"></div><div class="shimmer sk-line-2"></div><div class="shimmer sk-line-3"></div></div><div class="shimmer sk-monto"></div></div>`;
       }
       contenedor.innerHTML = esqueletoHTML;
     }
 
-    async function cargarPagos() {
-      const icon = document.querySelector('.btn-actualizar svg');
-      icon.classList.add('girar');
-      
+    // 3. Función para dibujar las tarjetas (Ahora usa el cliente de Supabase)
+    async function cargarPagos(destacarNuevo = false) {
       const contenedor = document.getElementById('contenedor-pagos');
       
-      // Si la app recién se abre (está vacía), mostramos el esqueleto
-      if (contenedor.innerHTML.trim() === '') {
-        mostrarEsqueleto();
-      }
+      if (contenedor.innerHTML.trim() === '') mostrarEsqueleto();
 
       try {
-        const respuesta = await fetch(supabaseUrl, {
-          method: 'GET',
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': 'Bearer ' + supabaseKey,
-            'Cache-Control': 'no-cache'
-          }
-        });
-        
-        const datos = await respuesta.json();
-        
-        // Pequeña pausa artificial para que la animación de refresco se aprecie
+        // Hacemos la consulta usando el SDK de Supabase
+        const { data: datos, error } = await cliente
+          .from('transacciones_zelle')
+          .select('*')
+          .order('id', { ascending: false });
+
+        if (error) throw error;
+
         setTimeout(() => {
           contenedor.innerHTML = ''; 
 
@@ -230,11 +133,12 @@
 
               const claseEstado = pago.estado.includes('Error') || pago.estado.includes('Alerta') ? 'estado alerta' : 'estado';
               
-              // Animación en cascada: Cada tarjeta tarda 0.08s más en aparecer que la anterior
+              // Si destacarNuevo es true, la primera tarjeta (la más reciente) brilla
+              const claseExtra = (destacarNuevo && index === 0) ? 'tarjeta-nueva' : '';
               const animDelay = index * 0.08;
 
               const tarjetaHTML = `
-                <div class="tarjeta" style="animation-delay: ${animDelay}s">
+                <div class="tarjeta ${claseExtra}" style="animation-delay: ${animDelay}s">
                   <div class="info-remitente">
                     <span class="nombre">${pago.remitente}</span>
                     <span class="fecha">${fechaLocal}</span>
@@ -246,24 +150,32 @@
               contenedor.innerHTML += tarjetaHTML;
             });
           }
-          
-          icon.classList.remove('girar');
-        }, 400); 
+        }, 300); 
 
       } catch (error) {
         console.error('Error:', error);
         contenedor.innerHTML = '<div class="mensaje-vacio" style="color: var(--danger);">Error de conexión. Verifica tu internet.</div>';
-        icon.classList.remove('girar');
       }
     }
 
-    // Ejecución inicial
-    mostrarEsqueleto();
+    // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL ---
+    // Esto se queda escuchando 24/7. Si alguien inserta un dato en Supabase, reacciona.
+    cliente
+      .channel('cambios-zelle')
+      .on(
+        'postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'transacciones_zelle' }, 
+        (payload) => {
+          console.log('¡Nuevo pago detectado en tiempo real!', payload);
+          // Recargamos la lista y le decimos que destaque la tarjeta nueva
+          cargarPagos(true); 
+        }
+      )
+      .subscribe();
+
+    // Carga inicial al abrir la página
     cargarPagos();
 
-    // Auto-Actualizar cada 60 segundos de forma silenciosa
-    setInterval(cargarPagos, 60000);
   </script>
-
 </body>
 </html>
