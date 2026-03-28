@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Movimientos Zelle</title>
   
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7432ff">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
@@ -24,6 +28,20 @@
     }
     .header-title { color: var(--primary); font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
     
+    /* Botón de instalación PWA */
+    #btn-instalar {
+      display: none; /* Oculto por defecto, se muestra por JS si es compatible */
+      background-color: #111;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
     /* Indicador de "En vivo" */
     .indicador-vivo { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--success); }
     .punto-rojo {
@@ -54,7 +72,7 @@
     .estado.alerta { color: var(--danger); background: rgba(217, 48, 37, 0.1); }
     .monto { font-weight: 700; font-size: 22px; color: var(--success); letter-spacing: -0.5px; }
     
-  /* Destello para inyección de nuevo pago */
+    /* Destello para inyección de nuevo pago (Con parche de visibilidad) */
     .tarjeta-nueva { 
       opacity: 1 !important; 
       transform: translateY(0) !important;
@@ -76,9 +94,12 @@
 
   <div class="header-container">
     <h1 class="header-title">Zelle</h1>
-    <div class="indicador-vivo">
-      <div class="punto-rojo"></div>
-      En vivo
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <button id="btn-instalar">Instalar App</button>
+      <div class="indicador-vivo">
+        <div class="punto-rojo"></div>
+        En vivo
+      </div>
     </div>
   </div>
 
@@ -150,7 +171,7 @@
       }
     }
 
-  // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL CON INYECCIÓN DIRECTA ---
+    // --- MAGIA: SUSCRIPCIÓN EN TIEMPO REAL CON INYECCIÓN DIRECTA ---
     cliente
       .channel('cambios-zelle')
       .on(
@@ -161,20 +182,14 @@
           
           try {
             const nuevoPago = payload.new;
-            console.log('2. Datos crudos extraídos:', nuevoPago);
-
             const fechaObj = new Date(nuevoPago.fecha_registro);
             const fechaLocal = fechaObj.toLocaleString('es-VE', { 
               day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' 
             });
-            console.log('3. Fecha formateada con éxito:', fechaLocal);
 
-            // Blindaje: Si por algún error la base de datos manda el estado vacío, no colapsa
             const estadoTexto = nuevoPago.estado || 'Procesado';
             const claseEstado = estadoTexto.includes('Error') || estadoTexto.includes('Alerta') ? 'estado alerta' : 'estado';
-            console.log('4. Estado calculado:', claseEstado);
             
-            // Blindaje: Si falta el remitente o el monto, ponemos un respaldo
             const tarjetaHTML = `
               <div class="tarjeta tarjeta-nueva" style="animation-delay: 0s">
                 <div class="info-remitente">
@@ -185,7 +200,6 @@
                 <div class="monto">$${nuevoPago.monto || '0.00'}</div>
               </div>
             `;
-            console.log('5. Diseño HTML construido perfectamente.');
             
             const contenedor = document.getElementById('contenedor-pagos');
             
@@ -194,7 +208,6 @@
             }
             
             contenedor.insertAdjacentHTML('afterbegin', tarjetaHTML);
-            console.log('6. ¡Éxito! Tarjeta insertada en la pantalla.');
 
           } catch (errorVisual) {
             console.error('🚨 ERROR CRÍTICO AL DIBUJAR LA TARJETA:', errorVisual);
@@ -203,7 +216,41 @@
       )
       .subscribe();
 
-    // Arrancamos el motor
+    // --- LÓGICA DE INSTALACIÓN PWA ---
+    let eventoInstalacion;
+    const btnInstalar = document.getElementById('btn-instalar');
+
+    // Registramos el Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker registrado con éxito'))
+        .catch(err => console.log('Error al registrar Service Worker:', err));
+    }
+
+    // Atrapamos el evento para instalar
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault(); // Evitamos el cartel automático de Chrome
+      eventoInstalacion = e;
+      btnInstalar.style.display = 'block'; // Mostramos nuestro botón
+    });
+
+    // Evento de clic en el botón
+    btnInstalar.addEventListener('click', async () => {
+      if (!eventoInstalacion) return;
+      eventoInstalacion.prompt(); // Mostramos el prompt nativo
+      const { outcome } = await eventoInstalacion.userChoice;
+      if (outcome === 'accepted') {
+        btnInstalar.style.display = 'none'; // Si aceptó, escondemos el botón
+      }
+      eventoInstalacion = null;
+    });
+
+    // Ocultar botón si ya está corriendo como app nativa (standalone)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      btnInstalar.style.display = 'none';
+    }
+
+    // Arrancamos el motor de datos
     cargarPagos();
 
   </script>
